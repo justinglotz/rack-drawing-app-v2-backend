@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Job {
+  id                Int           @id @default(autoincrement())
+  name              String        @db.VarChar(500)
+  description       String?       @db.VarChar(1000)
+  flexPullsheetId   String        @unique @db.VarChar(255)
+  flexPullsheetName String?       @db.VarChar(255)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime      @default(now())
+  equipment         Equipment[]
+  rackDrawings      RackDrawing[]
+}
+
+model Equipment {
+  id              Int               @id @default(autoincrement())
+  jobId           Int
+  job             Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  name            String            @db.VarChar(255)
+  displayName     String            @db.VarChar(255)
+  rackUnits       Int
+  category        String            @db.VarChar(100)
+  isRack          Boolean           @default(false)
+  isStandardItem  Boolean           @default(false)
+  isCustomItem    Boolean           @default(false)
+  manufacturer    String?           @db.VarChar(255)
+  modelNumber     String?           @db.VarChar(255)
+  createdAt       DateTime          @default(now())
+  placedEquipment PlacedEquipment[]
+
+  @@index([jobId])
+}
+
+model PlacedEquipment {
+  id                  Int         @id @default(autoincrement())
+  equipmentId         Int
+  equipment           Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  rackDrawingId       Int
+  rackDrawing         RackDrawing @relation(fields: [rackDrawingId], references: [id], onDelete: Cascade)
+  name                String      @db.VarChar(500)
+  displayNameOverride String?     @db.VarChar(500)
+  rackUnits           Int
+  quantity            Int         @default(1)
+  flexLineId          String      @db.VarChar(255)
+  flexSection         String      @db.VarChar(255)
+  isFromPullsheet     Boolean     @default(true)
+  side                Side
+  startPosition       Int?
+  notes               String?     @db.VarChar(1000)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  @@index([equipmentId])
+  @@index([flexSection])
+}
+
+enum Side {
+  FRONT
+  BACK
+  FRONT_LEFT
+  FRONT_RIGHT
+  BACK_LEFT
+  BACK_RIGHT
+}
+
+model RackDrawing {
+  id               Int               @id @default(autoincrement())
+  jobId            Int
+  job              Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  name             String            @db.VarChar(500)
+  totalSpaces      Int
+  isDoubleWide     Boolean           @default(false)
+  flexSection      String            @db.VarChar(100)
+  displayOrder     Int               @default(0)
+  notes            String?           @db.VarChar(1000)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  placedEquipments PlacedEquipment[]
+
+  @@index([jobId])
+}
