@@ -1,28 +1,29 @@
-// Output structure that maps to your Prisma models
-interface EquipmentItem {
-  flexLineId: string;
+// Output structure that maps to Prisma PullsheetItem model
+interface ParsedPullsheetItem {
+  flexResourceId: string;
+  flexSection: string;
   name: string;
   quantity: number;
-  rackUnits: number | null;
+  rackUnits: number; // defaults to 0 if not detected
   notes: string | null;
-  children?: EquipmentItem[];
+  parentflexResourceId: string | null; // reference to parent item's flexResourceId
+}
+
+interface ParsedRackDrawing {
+  name: string;
+  totalSpaces: number;
+  isDoubleWide: boolean;
+  flexSection: string;
+  notes: string | null;
+  equipment: ParsedPullsheetItem[]; // flat list, children have parentflexResourceId set
 }
 
 interface ParsedData {
   job: {
     name: string;
   };
-  rackDrawings: {
-    name: string;
-    totalSpaces: number;
-    isDoubleWide: boolean;
-    flexSection: string;
-    notes: string | null;
-    equipment: EquipmentItem[];
-  }[];
-  looseEquipment: {
-    [section: string]: EquipmentItem[];
-  };
+  rackDrawings: ParsedRackDrawing[];
+  looseEquipment: ParsedPullsheetItem[]; // flat list with flexSection on each item
 }
 
 function parseFlexData(data: any): ParsedData {
@@ -31,18 +32,15 @@ function parseFlexData(data: any): ParsedData {
       name: ''
     },
     rackDrawings: [],
-    looseEquipment: {},
+    looseEquipment: [],
   };
 
   if (!Array.isArray(data) || data.length === 0) {
-    return { job: { name: '' }, rackDrawings: [], looseEquipment: {} };
+    return { job: { name: '' }, rackDrawings: [], looseEquipment: [] };
   }
 
   for (const section of data) {
     const sectionName = section.name; // "FOH", "MON", etc.
-
-    // Initialize loose equipment array for this section
-    result.looseEquipment[sectionName] = [];
 
     // Get job name from first section's upstreamLink
     if (!result.job.name && section.upstreamLink?.elementName) {
@@ -59,69 +57,69 @@ function parseFlexData(data: any): ParsedData {
 function findItems(items: any[], section: string, result: ParsedData): void {
   for (const item of items) {
     if (isRack(item.name)) {
-      // This is a rack - extract it with its equipment (preserving nesting)
+      // This is a rack - extract it with its equipment as flat list
       result.rackDrawings.push({
         name: item.name,
         totalSpaces: extractSpaces(item.name) ?? 0,
         isDoubleWide: item.name.toLowerCase().includes('doublewide'),
         flexSection: section,
         notes: item.note ?? null,
-        equipment: buildEquipmentTree(item.children ?? []),
+        equipment: flattenEquipment(item.children ?? [], section, null),
       });
     } else if (item.children?.length) {
       // Not a rack but has children
       // If it's a virtual package (grouping), just recurse
-      // If it's real equipment with sub-items, add it with nested structure
+      // If it's real equipment with sub-items, flatten with parent reference
       if (item.isVirtual) {
         findItems(item.children, section, result);
       } else {
-        // Real equipment with nested items - preserve the tree structure
-        if (!result.looseEquipment[section]) {
-          result.looseEquipment[section] = [];
-        }
-        result.looseEquipment[section].push(buildEquipmentItem(item));
+        // Real equipment with nested items - add parent and children as flat list
+        const flatItems = flattenEquipment([item], section, null);
+        result.looseEquipment.push(...flatItems);
       }
     } else {
       // Leaf item not inside a rack - it's loose equipment
-      if (!result.looseEquipment[section]) {
-        result.looseEquipment[section] = [];
-      }
-      result.looseEquipment[section].push({
-        flexLineId: item.id,
+      result.looseEquipment.push({
+        flexResourceId: item.resourceId,
+        flexSection: section,
         name: item.name,
         quantity: item.quantity ?? 1,
-        rackUnits: extractRackUnits(item.name),
+        rackUnits: extractRackUnits(item.name) ?? 0,
         notes: item.note ?? null,
+        parentflexResourceId: null,
       });
     }
   }
 }
 
-function buildEquipmentItem(item: any): EquipmentItem {
-  const equipment: EquipmentItem = {
-    flexLineId: item.id,
-    name: item.name,
-    quantity: item.quantity ?? 1,
-    rackUnits: extractRackUnits(item.name),
-    notes: item.note ?? null,
-  };
-
-  if (item.children?.length) {
-    equipment.children = buildEquipmentTree(item.children);
-  }
-
-  return equipment;
-}
-
-function buildEquipmentTree(items: any[]): EquipmentItem[] {
-  const equipment: EquipmentItem[] = [];
+// Flatten nested equipment into a flat array with parentflexResourceId references
+function flattenEquipment(
+  items: any[],
+  section: string,
+  parentflexResourceId: string | null
+): ParsedPullsheetItem[] {
+  const result: ParsedPullsheetItem[] = [];
 
   for (const item of items) {
     if (isRack(item.name)) continue; // Skip nested racks
-    equipment.push(buildEquipmentItem(item));
+
+    result.push({
+      flexResourceId: item.resourceId,
+      flexSection: section,
+      name: item.name,
+      quantity: item.quantity ?? 1,
+      rackUnits: extractRackUnits(item.name) ?? 0,
+      notes: item.note ?? null,
+      parentflexResourceId,
+    });
+
+    // Recursively flatten children with this item as parent
+    if (item.children?.length) {
+      result.push(...flattenEquipment(item.children, section, item.resourceId));
+    }
   }
 
-  return equipment;
+  return result;
 }
 
 function isRack(name: string): boolean {
@@ -141,4 +139,4 @@ function extractRackUnits(name: string): number | null {
 }
 
 export { parseFlexData };
-export type { ParsedData, EquipmentItem };
+export type { ParsedData, ParsedPullsheetItem, ParsedRackDrawing };
