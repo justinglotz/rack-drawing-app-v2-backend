@@ -1,12 +1,12 @@
 import 'dotenv/config';
-import { fetchFlexPullsheetData } from '../services/flexApiService.js';
+import { fetchFlexPullsheetRaw } from '../services/flexApiService.js';
 import { parseFlexData } from '../services/flexParser.js';
 
 async function main() {
   const pullsheetId = 'ac277410-3d92-42c4-a332-68506e3f22d2';
   console.log(`Fetching pullsheet: ${pullsheetId}\n`);
 
-  const raw = await fetchFlexPullsheetData(pullsheetId);
+  const raw = await fetchFlexPullsheetRaw(pullsheetId);
 
   // Debug: show structure
   console.log('Raw structure:');
