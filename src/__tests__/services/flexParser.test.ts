@@ -34,7 +34,9 @@ describe('parseFlexData', () => {
 
   it('returns empty result for non-array input', () => {
     const result = parseFlexData(null)
+    expect(result.job.name).toBe('')
     expect(result.rackDrawings).toHaveLength(0)
+    expect(result.looseEquipment).toHaveLength(0)
   })
 
   // --- Job name extraction ---
