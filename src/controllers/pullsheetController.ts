@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import { Prisma } from '../../generated/prisma/client.js';
 import { prisma } from '../config/prisma.js';
 import { fetchFlexPullsheetData } from '../services/flexApiService.js';
 import type { ParsedPullsheetItem } from '../services/flexParser.js';
@@ -43,12 +44,29 @@ export const importPullsheet = async (req: Request, res: Response) => {
     const parsedData = await fetchFlexPullsheetData(pullsheetId);
 
     // 1. Create Job
-    const job = await prisma.job.create({
-      data: {
-        name: parsedData.job.name,
-        flexPullsheetId: pullsheetId,
-      },
-    });
+    let job;
+    try {
+      job = await prisma.job.create({
+        data: {
+          name: parsedData.job.name,
+          flexPullsheetId: pullsheetId,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        const existingJob = await prisma.job.findUnique({
+          where: { flexPullsheetId: pullsheetId },
+        });
+        return res.status(409).json({
+          error: 'This pullsheet has already been imported',
+          jobId: existingJob?.id ?? null,
+        });
+      }
+      throw error;
+    }
 
     // 2. Create RackDrawings in parallel
     const rackPromise = Promise.all(
