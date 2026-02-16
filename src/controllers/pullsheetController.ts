@@ -57,12 +57,12 @@ export const importPullsheet = async (req: Request, res: Response) => {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        const existingJob = await prisma.job.findUnique({
+        const conflictingJob = await prisma.job.findUnique({
           where: { flexPullsheetId: pullsheetId },
         });
         return res.status(409).json({
           error: 'This pullsheet has already been imported',
-          jobId: existingJob?.id ?? null,
+          jobId: conflictingJob?.id ?? null,
         });
       }
       throw error;
