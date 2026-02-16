@@ -28,6 +28,18 @@ export const importPullsheet = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid Flex URL format' });
     }
 
+    // Check if pullsheet has already been imported
+    const existingJob = await prisma.job.findUnique({
+      where: { flexPullsheetId: pullsheetId }
+    });
+
+    if (existingJob) {
+      return res.status(409).json({
+        error: 'This pullsheet has already been imported',
+        jobId: existingJob.id
+      });
+    }
+
     const parsedData = await fetchFlexPullsheetData(pullsheetId);
 
     // 1. Create Job
