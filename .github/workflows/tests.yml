@@ -23,6 +23,8 @@ jobs:
 
       - name: Generate Prisma client
         run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
 
       - name: Run tests
         run: npm test
