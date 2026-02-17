@@ -1,16 +1,43 @@
 import { parseFlexData } from "../../services/flexParser.js";
 
+// Real Flex API data structure from actual pullsheet
 const mockSection = {
   name: 'FOH',
-  upstreamLink: { elementName: 'Festival 2024' },
+  upstreamLink: { elementName: 'Josiah Queen 2026 Control Spring' },
   children: [
     {
-      resourceId: 'res-001',
-      name: 'Shure SM58',
-      quantity: 4,
+      resourceId: 'ad682670-473a-11e9-a1a2-f23c91d98225',
+      name: 'Spectrum Case 10-Space Doublewide Rack (Aluminum Extrusion)',
+      quantity: 1,
       note: null,
       isVirtual: false,
-      children: []
+      children: [
+        {
+          resourceId: '3d211335-dd88-481f-9288-1302268b4850',
+          name: 'Waves Soundgrid Extreme Server-C (X10) - 2RU',
+          quantity: 1,
+          note: null,
+          isVirtual: false,
+          children: []
+        }
+      ]
+    },
+    {
+      resourceId: '85c26ac0-3a82-11e7-aba5-0025903308d6',
+      name: 'Digico Package',
+      quantity: 1,
+      note: null,
+      isVirtual: true,
+      children: [
+        {
+          resourceId: '4f3b6f50-bcc0-11eb-9a52-f23c925a9785',
+          name: 'Spectrum Case for Digico Q225 Console',
+          quantity: 1,
+          note: null,
+          isVirtual: false,
+          children: []
+        }
+      ]
     }
   ]
 }
@@ -43,7 +70,7 @@ describe('parseFlexData', () => {
 
   it('extracts the job name from the first section', () => {
     const result = parseFlexData([mockSection])
-    expect(result.job.name).toBe('Festival 2024')
+    expect(result.job.name).toBe('Josiah Queen 2026 Control Spring')
   })
 
   // --- Loose equipment ---
@@ -51,9 +78,22 @@ describe('parseFlexData', () => {
   it('puts non-rack equipment into looseEquipment', () => {
     const result = parseFlexData([mockSection])
 
+    // mockSection has a virtual package with 1 child inside it (the virtual parent is skipped)
     expect(result.looseEquipment).toHaveLength(1)
-    expect(result.looseEquipment[0]?.name).toBe('Shure SM58')
+    expect(result.looseEquipment[0]?.name).toBe('Spectrum Case for Digico Q225 Console')
     expect(result.looseEquipment[0]?.flexSection).toBe('FOH')
+  })
+
+  it('detects real rack from mockSection', () => {
+    // mockSection includes a real 10-Space Doublewide Rack with equipment inside
+    const result = parseFlexData([mockSection])
+
+    expect(result.rackDrawings).toHaveLength(1)
+    expect(result.rackDrawings[0]?.name).toBe('Spectrum Case 10-Space Doublewide Rack (Aluminum Extrusion)')
+    expect(result.rackDrawings[0]?.totalSpaces).toBe(10)
+    expect(result.rackDrawings[0]?.isDoubleWide).toBe(true)
+    expect(result.rackDrawings[0]?.equipment).toHaveLength(1)
+    expect(result.rackDrawings[0]?.equipment[0]?.name).toBe('Waves Soundgrid Extreme Server-C (X10) - 2RU')
   })
 
   it('returns 0 rack units for items with no RU in name', () => {
