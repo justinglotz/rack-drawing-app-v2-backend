@@ -4,7 +4,7 @@ import { prisma } from '../config/prisma.js';
 export const getPlacedEquipment = async (req: Request, res: Response) => {
   try {
     const placedEquipment = await prisma.pullsheetItem.findMany();
-    res.json(placedEquipment);
+    res.status(200).json(placedEquipment);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch placed equipment' });
   }
@@ -25,7 +25,7 @@ export const moveEquipment = async (req: Request, res: Response) => {
           side: null,
         },
       });
-      res.json(updated);
+      res.status(200).json(updated);
       return;
     }
 
@@ -40,7 +40,7 @@ export const moveEquipment = async (req: Request, res: Response) => {
         where: { id: Number(id) },
         data: { rackDrawingId, startPosition, side },
       });
-      res.json(updated);
+      res.status(200).json(updated);
       return;
     }
 
@@ -50,7 +50,7 @@ export const moveEquipment = async (req: Request, res: Response) => {
       data: { startPosition, side },
     });
 
-    res.json(updated);
+    res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to move equipment' });
   }
@@ -71,7 +71,7 @@ export const updateEquipmentName = async (req: Request, res: Response) => {
       data: { displayNameOverride },
     });
 
-    res.json(updated);
+    res.status(200).json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update equipment name' });
   }
