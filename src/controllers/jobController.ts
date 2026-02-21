@@ -5,7 +5,7 @@ import { prisma } from '../config/prisma.js';
 export const getJobs = async (req: Request, res: Response) => {
   try {
     const jobs = await prisma.job.findMany();
-    res.json(jobs);
+    res.status(200).json(jobs);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch jobs' });
   }
@@ -59,7 +59,7 @@ export const editJob = async (req: Request, res: Response) => {
       },
     });
 
-    res.json(updatedJob);
+    res.status(200).json(updatedJob);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update job' });
   }
