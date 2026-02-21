@@ -13,8 +13,38 @@ export const getPlacedEquipment = async (req: Request, res: Response) => {
 export const moveEquipment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { startPosition, side } = req.body;
+    const { rackDrawingId, startPosition, side } = req.body;
 
+    // If moving to unplaced (rackDrawingId is null), clear position data
+    if (rackDrawingId === null) {
+      const updated = await prisma.pullsheetItem.update({
+        where: { id: Number(id) },
+        data: {
+          rackDrawingId: null,
+          startPosition: null,
+          side: null,
+        },
+      });
+      res.json(updated);
+      return;
+    }
+
+    // If rackDrawingId is provided, require startPosition and side
+    if (rackDrawingId !== undefined) {
+      if (startPosition === undefined || side === undefined) {
+        res.status(400).json({ error: 'startPosition and side are required when placing equipment in a rack' });
+        return;
+      }
+
+      const updated = await prisma.pullsheetItem.update({
+        where: { id: Number(id) },
+        data: { rackDrawingId, startPosition, side },
+      });
+      res.json(updated);
+      return;
+    }
+
+    // If only moving within a rack (rackDrawingId not provided), just update position
     const updated = await prisma.pullsheetItem.update({
       where: { id: Number(id) },
       data: { startPosition, side },
@@ -23,5 +53,26 @@ export const moveEquipment = async (req: Request, res: Response) => {
     res.json(updated);
   } catch (error) {
     res.status(500).json({ error: 'Failed to move equipment' });
+  }
+}
+
+export const updateEquipmentName = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { displayNameOverride } = req.body;
+
+    if (!displayNameOverride || typeof displayNameOverride !== 'string') {
+      res.status(400).json({ error: 'displayNameOverride must be a non-empty string' });
+      return;
+    }
+
+    const updated = await prisma.pullsheetItem.update({
+      where: { id: Number(id) },
+      data: { displayNameOverride },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update equipment name' });
   }
 }
