@@ -15,16 +15,18 @@ export const getJobs = async (req: Request, res: Response) => {
 export const createJob = async (req: Request, res: Response) => {
   try {
     const { name, flexPullsheetId, description } = req.body;
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const parsedFlexPullsheetId = Number(flexPullsheetId)
 
-    if (!name || !flexPullsheetId) {
+    if (!normalizedName || !Number.isInteger(parsedFlexPullsheetId)) {
       res.status(400).json({ error: 'Name and flexPullsheetId are required' });
       return;
     }
 
     const newJob = await prisma.job.create({
       data: {
-        name,
-        flexPullsheetId,
+        name: normalizedName,
+        flexPullsheetId: parsedFlexPullsheetId,
         ...(description && { description }),
       },
     });
@@ -40,9 +42,10 @@ export const editJob = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
+    const jobId = Number(id);
 
-    if (!id) {
-      res.status(400).json({ error: 'Job ID is required' });
+    if (!Number.isInteger(jobId)) {
+      res.status(400).json({ error: 'Invalid job ID' });
       return;
     }
 
@@ -52,7 +55,7 @@ export const editJob = async (req: Request, res: Response) => {
     }
 
     const updatedJob = await prisma.job.update({
-      where: { id: parseInt(id as string) },
+      where: { id: jobId },
       data: {
         ...(name && { name }),
         ...(description !== undefined && { description }),
@@ -69,14 +72,14 @@ export const editJob = async (req: Request, res: Response) => {
 export const deleteJob = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
-    if (!id) {
-      res.status(400).json({ error: 'Job ID is required' });
+    const jobId = Number(id);
+    if (!Number.isInteger(jobId)) {
+      res.status(400).json({ error: 'Invalid job ID' });
       return;
     }
 
     await prisma.job.delete({
-      where: { id: parseInt(id as string) },
+      where: { id: jobId },
     });
 
     res.status(204).send();

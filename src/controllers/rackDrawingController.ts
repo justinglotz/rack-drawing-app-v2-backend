@@ -13,26 +13,27 @@ export const getRackDrawings = async (req: Request, res: Response) => {
 export const deleteRackDrawing = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const rackDrawingId = Number(id)
 
-    if (!id) {
-      res.status(400).json({ error: 'Rack drawing ID is required' });
+    if (!Number.isInteger(rackDrawingId)) {
+      res.status(400).json({ error: 'Invalid rack drawing ID' });
       return;
     }
 
     // Clear all placement data for equipment in this rack
-    await prisma.pullsheetItem.updateMany({
-      where: { rackDrawingId: Number(id) },
-      data: {
-        rackDrawingId: null,
-        side: null,
-        startPosition: null,
-      },
-    });
-
-    // Delete the rack drawing
-    await prisma.rackDrawing.delete({
-      where: { id: Number(id) },
-    });
+    await prisma.$transaction([
+      prisma.pullsheetItem.updateMany({
+        where: { rackDrawingId },
+        data: {
+          rackDrawingId: null,
+          side: null,
+          startPosition: null,
+        }
+      }),
+      prisma.rackDrawing.delete({
+        where: { id: rackDrawingId }
+      })
+    ])
 
     res.status(204).send();
   } catch (error) {
