@@ -1,17 +1,17 @@
 /** @type {import('jest').Config} */
 const config = {
-  preset: 'ts-jest/presets/default-esm',
-  testEnvironment: 'node',
-  extensionsToTreatAsEsm: ['.ts'],
+  preset: "ts-jest/presets/default-esm",
+  testEnvironment: "node",
+  extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
+    "^(\\.{1,2}/.*)\\.js$": "$1",
   },
-  coverageReporters: ['text', 'html', 'lcov'],
-  collectCoverageFrom: ['src/**/*.ts'],
-  coveragePathIgnorePatterns: ['src/index.ts', 'src/scripts/', 'src/config/'],
+  coverageReporters: ["text", "html", "lcov"],
+  collectCoverageFrom: ["src/**/*.ts"],
+  coveragePathIgnorePatterns: ["src/index.ts", "src/scripts/", "src/config/"],
   coverageThreshold: {
     global: { lines: 60, functions: 60, branches: 50, statements: 60 },
-  }
-}
+  },
+};
 
-export default config
+export default config;

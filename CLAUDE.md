@@ -1,150 +1,60 @@
-# Rack Drawing App - Backend
+## Workflow Orchestration
 
-## Overview
+### 1. Plan Mode Default
 
-This is the backend for a rack drawing application that helps audio engineers plan and visualize equipment placement in road cases/racks for live events. The app integrates with Flex (an external rental management system) to import pullsheet data.
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
 
-## Database Models
+### 2. Subagent Strategy
 
-### EquipmentCatalog
-A **global lookup table** for equipment display names. Not tied to any specific job.
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
 
-- `flexResourceId` - Stable ID from Flex (same equipment type always has same ID)
-- `name` - Raw name from Flex for matching
-- `displayName` - Curated display name for UI
-- `rackUnits` - Default rack unit height
-- `isStandardItem` - True for user-added items like blanks, rack doors
-- `excludeFromRackDrawings` - True for items that never go in racks (consoles, speakers, etc.)
+### 3. Self-Improvement Loop
 
-### PullsheetItem
-A **job-specific equipment instance** from a Flex pullsheet. Can be placed in a rack or unplaced.
+- After ANY correction from the user: update tasks/lessons. md with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for relevant project
 
-- `jobId` - Required link to the job
-- `equipmentCatalogId` - Optional link to catalog for display name lookup
-- `rackDrawingId` - Optional link to rack (null = unplaced, shows in sidebar)
-- `parentId` - For nested equipment (e.g., Stage 64 containing input/output modules)
-- `side`, `startPosition` - Placement within rack (only relevant when placed)
+### 4. Verification Before Done
 
-### RackDrawing
-A rack/road case that equipment can be placed into.
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness
 
-- `jobId` - Which job this rack belongs to
-- `totalSpaces` - Number of rack units (e.g., 14 for a 14-space rack)
-- `isDoubleWide` - For double-wide racks with left/right sides
-- `flexSection` - Which section (FOH, MON, etc.)
+### 5. Demand Elegance (Balanced)
 
-### Job
-A show/event imported from a Flex pullsheet.
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
 
-- `flexPullsheetId` - The Flex pullsheet UUID
-- `name` - Job name from Flex
+### 6. Autonomous Bug Fixing
 
-## Data Flow
+When given a bug report: just fix it. Don't ask for hand-holding
 
-### 1. Flex API Integration
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing CI tests without being told how
 
-```
-Flex Pullsheet API → flexApiService.ts → Raw JSON
-```
+## Task Management
 
-The `fetchFlexPullsheetData()` function fetches hierarchical equipment data from Flex.
+1. **Plan First**: Write plan to tasks/todo.md" with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to tasks/todo.md
+6. **Capture Lessons**: Update tasks/lessons.md' after corrections
 
-### 2. Parsing
+## Core Principles
 
-```
-Raw JSON → flexParser.ts → ParsedData
-```
-
-The parser:
-- Extracts job name from `upstreamLink.elementName`
-- Detects racks via `isRack()` (name contains "rack" AND "space")
-- Extracts rack size via `extractSpaces()` (e.g., "14-Space" → 14)
-- Separates equipment inside racks from loose equipment
-- Preserves nested equipment hierarchy (parent/children)
-- Extracts rack units via `extractRackUnits()` (e.g., "10RU" → 10)
-
-### 3. Database Import
-
-```
-ParsedData → Import Service → Database
-```
-
-Import creates:
-1. **Job** from pullsheet metadata
-2. **RackDrawings** for each rack found
-3. **PullsheetItems** for all equipment:
-   - Equipment inside racks → `rackDrawingId` set (pre-placed)
-   - Loose equipment → `rackDrawingId: null` (unplaced)
-4. **Catalog lookups** for display names
-
-### 4. User Workflow
-
-```
-Unplaced Items (sidebar) → Drag & Drop → Placed in Rack
-```
-
-- **View unplaced**: `WHERE rackDrawingId IS NULL`
-- **Place item**: Update `rackDrawingId`, `side`, `startPosition`
-- **Unplace item**: Set `rackDrawingId`, `side`, `startPosition` to null
-- **View rack contents**: Include pullsheetItems where `rackDrawingId` matches
-
-## Key Queries
-
-### Get unplaced items for a job (excluding non-rack items)
-```typescript
-prisma.pullsheetItem.findMany({
-  where: {
-    jobId,
-    rackDrawingId: null,
-    parentId: null,
-    OR: [
-      { equipmentCatalog: null },
-      { equipmentCatalog: { excludeFromRackDrawings: false } }
-    ]
-  },
-  include: { equipmentCatalog: true, children: true }
-})
-```
-
-### Get rack with placed items
-```typescript
-prisma.rackDrawing.findUnique({
-  where: { id: rackId },
-  include: {
-    pullsheetItems: {
-      where: { parentId: null },
-      include: {
-        equipmentCatalog: true,
-        children: { include: { equipmentCatalog: true } }
-      }
-    }
-  }
-})
-```
-
-### Place an item in a rack
-```typescript
-prisma.pullsheetItem.update({
-  where: { id: itemId },
-  data: { rackDrawingId: rack.id, side: "FRONT", startPosition: 5 }
-})
-```
-
-## File Structure
-
-```
-src/
-  services/
-    flexApiService.ts  - Flex API client
-    flexParser.ts      - Parse Flex JSON to structured data
-  scripts/
-    testFlexParser.ts  - Test script for parser
-prisma/
-  schema.prisma        - Database schema
-```
-
-## Environment Variables
-
-- `FLEX_BASE_API_URL` - Base URL for Flex API
-- `FLEX_API_KEY` - Auth token for Flex API
-- `DATABASE_URL` - PostgreSQL connection string
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+- **Learning**: I am a junior developer, and one of my main goals from this project is to learn. Make sure to explain new ideas and concepts and help me learn as much as I can along the way.
