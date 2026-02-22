@@ -259,7 +259,7 @@ describe('Job Controller', () => {
       await editJob(makeReq({ name: 'Updated Show' }, {}), res)
 
       expect(res._status).toBe(400)
-      expect(res._json).toEqual({ error: 'Job ID is required' })
+      expect(res._json).toEqual({ error: 'Invalid job ID' })
       expect(mockPrisma.job.update).not.toHaveBeenCalled()
     })
 
@@ -324,7 +324,7 @@ describe('Job Controller', () => {
       await deleteJob(makeReq({}, {}), res)
 
       expect(res._status).toBe(400)
-      expect(res._json).toEqual({ error: 'Job ID is required' })
+      expect(res._json).toEqual({ error: 'Invalid job ID' })
       expect(mockPrisma.job.delete).not.toHaveBeenCalled()
     })
 

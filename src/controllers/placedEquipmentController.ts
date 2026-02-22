@@ -37,7 +37,7 @@ export const moveEquipment = async (req: Request, res: Response) => {
 
     // If rackDrawingId is provided, require startPosition and side
     if (rackDrawingId !== undefined) {
-      if (startPosition === null || side === null) {
+      if (startPosition == null || side == null) {
         res.status(400).json({ error: 'startPosition and side are required when placing equipment in a rack' });
         return;
       }

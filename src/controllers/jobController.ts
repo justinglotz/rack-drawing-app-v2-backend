@@ -16,9 +16,9 @@ export const createJob = async (req: Request, res: Response) => {
   try {
     const { name, flexPullsheetId, description } = req.body;
     const normalizedName = typeof name === 'string' ? name.trim() : '';
-    const parsedFlexPullsheetId = Number(flexPullsheetId)
+    const normalizedFlexPullsheetId = typeof flexPullsheetId === 'string' ? flexPullsheetId.trim() : '';
 
-    if (!normalizedName || !Number.isInteger(parsedFlexPullsheetId)) {
+    if (!normalizedName || !normalizedFlexPullsheetId) {
       res.status(400).json({ error: 'Name and flexPullsheetId are required' });
       return;
     }
@@ -26,7 +26,7 @@ export const createJob = async (req: Request, res: Response) => {
     const newJob = await prisma.job.create({
       data: {
         name: normalizedName,
-        flexPullsheetId: parsedFlexPullsheetId,
+        flexPullsheetId: normalizedFlexPullsheetId,
         ...(description && { description }),
       },
     });
