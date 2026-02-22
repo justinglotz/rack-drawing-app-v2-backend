@@ -170,6 +170,33 @@ describe('Job Controller', () => {
       expect(res._json).toEqual({ error: 'Name and flexPullsheetId are required' })
     })
 
+    it('returns 400 when name is whitespace-only', async () => {
+      const res = makeRes()
+      await createJob(makeReq({ name: '   ', flexPullsheetId: 'valid-id' }), res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Name and flexPullsheetId are required' })
+      expect(mockPrisma.job.create).not.toHaveBeenCalled()
+    })
+
+    it('returns 400 when flexPullsheetId is whitespace-only', async () => {
+      const res = makeRes()
+      await createJob(makeReq({ name: 'Valid', flexPullsheetId: '   ' }), res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Name and flexPullsheetId are required' })
+      expect(mockPrisma.job.create).not.toHaveBeenCalled()
+    })
+
+    it('returns 400 when both name and flexPullsheetId are whitespace-only', async () => {
+      const res = makeRes()
+      await createJob(makeReq({ name: '   ', flexPullsheetId: '   ' }), res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Name and flexPullsheetId are required' })
+      expect(mockPrisma.job.create).not.toHaveBeenCalled()
+    })
+
     it('returns 500 on database error', async () => {
       mockPrisma.job.create.mockRejectedValue(new Error('Database error'))
 
