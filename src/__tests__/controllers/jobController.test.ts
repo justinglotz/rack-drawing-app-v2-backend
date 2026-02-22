@@ -263,6 +263,15 @@ describe('Job Controller', () => {
       expect(mockPrisma.job.update).not.toHaveBeenCalled()
     })
 
+    it('returns 400 when id is non-numeric', async () => {
+      const res = makeRes()
+      await editJob(makeReq({ name: 'Updated Show' }, { id: 'abc' }), res)
+
+      expect(res._status).toBe(400)
+      expect(res._json).toEqual({ error: 'Invalid job ID' })
+      expect(mockPrisma.job.update).not.toHaveBeenCalled()
+    })
+
     it('returns 400 when no fields to update', async () => {
       const res = makeRes()
       await editJob(makeReq({}, { id: '1' }), res)
