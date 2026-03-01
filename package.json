@@ -10,7 +10,8 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
-    "dev": "nodemon --exec tsx src/index.ts"
+    "dev": "nodemon --exec tsx src/index.ts",
+    "db:seed": "tsx ./prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.3.0",
