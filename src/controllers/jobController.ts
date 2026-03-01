@@ -11,6 +11,32 @@ export const getJobs = async (req: Request, res: Response) => {
   }
 }
 
+// Get a specific job by ID
+export const getJob = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const jobId = Number(id);
+
+    if (!Number.isInteger(jobId)) {
+      res.status(400).json({ error: 'Invalid job ID' });
+      return;
+    }
+
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!job) {
+      res.status(404).json({ error: 'Job not found' });
+      return;
+    }
+
+    res.status(200).json(job);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch job' });
+  }
+}
+
 // Create job
 export const createJob = async (req: Request, res: Response) => {
   try {
